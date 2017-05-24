@@ -33,8 +33,12 @@ def start():
     dict_list = search(word)
     if not len(dict_list) == 0:
         for dict in dict_list:
-            print "\t" + dict
-
+            try:
+                str = "\t" + dict
+                print str
+            except:
+                pass
+        # print dict_list
     print "###########################"
 
 

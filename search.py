@@ -8,14 +8,11 @@ import os
 import sys
 import config
 
-#方法二
+from openpyxl import load_workbook
+
+# 方法二
 # import urllib2
 # from bs4 import BeautifulSoup
-
-
-
-
-
 
 
 global list
@@ -32,25 +29,39 @@ def _get_index_file(char):
 
 
 def _spider(word, file):
-    #方法一
+    # 方法一
     str = strl + word + strr
     str = os.popen(str)
     str = str.read()
     sys.stdout.flush()
     str = str.split('\n')
-    with open(file, 'a') as  file:
-        flag = True  # 表示第一次写入
-        for s in str:
-            if not len(s) == 0:
-                list.append(s)
-                if flag == True:
-                    file.write("\n")
-                    file.write("|\t" + word + "\t|\t" + s + "\t|")
-                    flag = False
-                else:
-                    file.write("\t" + s + "\t|")
+    wb = load_workbook(file)
+    sheetNames = wb.sheetnames
+    ws = wb[sheetNames[0]]
+    row = ws.max_row + 1
+    ws.cell(row=row, column=1, value=word)
+    i = 2
+    for s in str:
+        if not len(s.strip()) == 0:
+            list.append(s)
+            ws.cell(row=row, column=i, value=s)
+        i += 1
+    wb.save(file)
 
-    #方法二
+
+    # with open(file, 'a') as  file:
+    #     flag = True  # 表示第一次写入
+    #     for s in str:
+    #         if not len(s) == 0:
+    #             list.append(s)
+    #             if flag == True:
+    #                 file.write("\n")
+    #                 file.write("|\t" + word + "\t|\t" + s + "\t|")
+    #                 flag = False
+    #             else:
+    #                 file.write("\t" + s + "\t|")
+
+    # 方法二
 
     # str = []
     # content = urllib2.urlopen("http://dict.cn/"+word).read()
@@ -73,18 +84,17 @@ def _spider(word, file):
 
 
 def _search_local_file(word, file):
-    with open(file) as file:
-        for line in file:
-            index = line.find("|")
-            str = line[index:line.find("|", index + 1)]
-            if str.find(word) == -1:
-                continue
-
-            dict_list = line.split("|")
-            for str in dict_list:
-                str = str.strip()
-                if not len(str) == 0:
-                    list.append(str)
+    wb = load_workbook(file, read_only=True)
+    sheetNames = wb.sheetnames
+    ws = wb[sheetNames[0]]
+    for row in ws.rows:
+        try:
+            if row[0].value == word:
+                for cell in row:
+                    list.append(cell.value)
+                list.pop(0)
+        except:
+            pass
 
     if not len(list) == 0:
         return True
@@ -97,6 +107,9 @@ def search(word):
     del list[:]
     # 获取搜索的文件名字
     file = _get_index_file(word[0])
+    if file == None:
+        print "no real word"
+        return list
     # 首先查找本地文件中是否存在，减少网络请求
     if not _search_local_file(word, file):
         # 如果不存在，则通过爬虫获取
@@ -104,5 +117,5 @@ def search(word):
     if len(list) == 0:
         print "no real word"
         return list
-    list.pop(0)
+
     return list
